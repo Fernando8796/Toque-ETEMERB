@@ -1,222 +1,210 @@
 #include <WiFi.h>
-#include <NTPClient.h>
-#include <WiFiUdp.h>
-#include <Ticker.h> // Lib que deixa funções rodando em segundo plano
+#include <ESPAsyncWebServer.h>
+#include "time.h"
 
-class ContadorInterno {
-private:
-  volatile uint32_t CONTADOR; // Variável que vai ter o tempo do dia em segundos
-  volatile int diaSemana;  // Variável para armazenar o dia da semana
+// Configuração do WiFi
+const char* ssid = "RedeTeste";
+const char* password = "1234@qwer";
 
-public:
+// Configuração do servidor NTP
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset = -3 * 3600;  // Fuso horário (Brasil: GMT-3)
 
-  ContadorInterno(){
-    CONTADOR = 0;
-    diaSemana = 0;
-  }
-
-  void incrementarContador(){
-    CONTADOR++;
-
-    // Verifica se completou um dia (86400 segundos)
-    if (CONTADOR >= 86400) {
-      CONTADOR = 0; // Reseta o contador para o início do próximo dia
-      diaSemana = (diaSemana + 1) % 7; // Incrementa o dia da semana (0 = Domingo, 6 = Sábado)
-    }
-  }
-
-  void ajustarContador(int diaDaSemana, int horas[3]) {
-    this->diaSemana = diaDaSemana;
-    CONTADOR = (horas[0] * 3600) + (horas[1] * 60) + horas[2];
-  }
-
-  int pegarHoras(){
-    return (CONTADOR / 3600) % 24;
-  }
-  int pegarMinutos(){
-    return (CONTADOR / 60) % 60;
-  }
-  int pegarSegundos(){
-    return CONTADOR % 60;
-  }
-
-  String pegarHoraFormatada(){
-    int horas = pegarHoras();
-    int minutos = pegarMinutos();
-    int segundos = pegarSegundos();
-
-    return (horas < 10 ? "0" : "") + String(horas) + ":" +
-           (minutos < 10 ? "0" : "") + String(minutos) + ":" +
-           (segundos < 10 ? "0" : "") + String(segundos);
-  }
-
-  uint32_t pegarContador(){
-    return CONTADOR;
-  }
-
-  int pegarDiaSemana() {
-    return diaSemana;
-  }
+// Lista de horários dos toques
+const char* horariosToque[] = {
+  "07:30:00", "07:45:00", "08:20:00", "09:10:00",
+  "09:30:00", "10:20:00", "11:10:00", "12:00:00",
+  "13:20:00", "13:30:00", "14:10:00", "15:00:00",
+  "15:20:00", "15:30:00", "16:10:00", "17:00:00"
 };
+const int numToques = sizeof(horariosToque) / sizeof(horariosToque[0]);
 
-WiFiUDP ntpUDP; // Cria uma instância do cliente UDP
-NTPClient timeClient(ntpUDP, "pool.ntp.org", -10800);
+AsyncWebServer server(80);
+String statusToque = "Ativo";
+unsigned char paradoHoje = 0;
+unsigned char desativado = 0;
 
-Ticker timer; // Criação de um ticker
-ContadorInterno relogio; // Criação de um relógio interno
+// Variáveis para controlar o toque sem usar delay()
+unsigned long tempoInicioToque = 0;
+const int duracaoToque = 10; // Duração do toque em segundos
 
-#define led 16  // Pino do led de conexão
-#define rele 17 // Pino do rele
-
-// Configuração da rede Wi-Fi
-const char* ssid = "teste";
-const char* password = "123@qwe";
-
-void incrementarRelogio() {
-    relogio.incrementarContador();
-}
-
-void ligarToque(int segundos) {
-  digitalWrite(rele, HIGH);
-  delay(segundos * 1000);
-  digitalWrite(rele, LOW);
-}
-
-int conectarAoWiFi(){
-
-  int tentativas = 1;
-
-  WiFi.begin(ssid, password);
-  Serial.println("Conectando...");
-  delay(5000);
-
-  while (tentativas <= 5 && WiFi.status() != WL_CONNECTED){
-    digitalWrite(led, LOW);
-    WiFi.disconnect();
-
-    WiFi.begin(ssid, password);
-    Serial.println("Conectando...");
-    delay(5000);
-    tentativas++;
-  }
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    digitalWrite(led, HIGH);
-    Serial.printf("Conectado à %s\n", ssid);
-    Serial.println("IP: " + WiFi.localIP().toString());
-    return 1;
-  } else {
-    return 0;
+// ================= Funções de toque =================
+void iniciarToque() {
+  if (statusToque != "Tocando") {
+    Serial.println("Iniciando toque...");
+    statusToque = "Tocando";
+    tempoInicioToque = millis();
   }
 }
 
-// Função Principal
+// ================== Setup ==================
 void setup() {
   Serial.begin(115200);
 
-  pinMode(led, OUTPUT);
-  pinMode(rele, OUTPUT);
+  // Conectar WiFi
+  WiFi.begin(ssid, password);
+  Serial.print("Conectando ao WiFi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+  Serial.println("\nConectado ao WiFi!");
+  Serial.println(WiFi.localIP());
 
-  int conexao;
-  do {
-    conexao = conectarAoWiFi(); // Conecta ao Wi-Fi 
-  } while (conexao == 0);
+  // Configurar NTP
+  configTime(gmtOffset, 0, ntpServer);
+
+  // Index/Página principal
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+
+    if (request->hasParam("hora") && request->hasParam("minuto")) {
+      // Obter a data atual do ESP32 para manter a data correta
+      struct tm timeinfo_now;
+      getLocalTime(&timeinfo_now);
+      
+      // Extrair os valores de hora e minuto dos argumentos da URL
+      int hora = 0;
+      int minuto = 0;
+      hora = request->getParam("hora")->value().toInt();
+      minuto = request->getParam("minuto")->value().toInt();
+      
+      // Log para verificar os valores
+      Serial.print("Valores recebidos via GET: ");
+      Serial.print("Hora: ");
+      Serial.print(hora);
+      Serial.print(", Minuto: ");
+      Serial.println(minuto);
+
+      // Configurar a nova estrutura de tempo
+      struct tm timeinfo;
+      memset(&timeinfo, 0, sizeof(timeinfo));
+      timeinfo.tm_hour = hora;
+      timeinfo.tm_min  = minuto;
+      timeinfo.tm_sec  = 0;
+      timeinfo.tm_mday = timeinfo_now.tm_mday;
+      timeinfo.tm_mon  = timeinfo_now.tm_mon; 
+      timeinfo.tm_year = timeinfo_now.tm_year;
+
+      // Atualizar a hora do sistema
+      time_t t = mktime(&timeinfo);
+      struct timeval tv = { .tv_sec = t };
+      settimeofday(&tv, NULL);
+    }
+
+    const char html[] PROGMEM = R"rawliteral(
+    <!doctypehtml><html lang=pt-br><meta charset=UTF-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Toque Automático ETEMERB</title><style>body{font-family:"Segoe UI",Arial,sans-serif;text-align:center;background:#f0f2f5;margin:0;padding:0;color:#333}header{background:linear-gradient(135deg,#0056b3,#007bff);color:#fff;padding:18px 0;font-size:1.5em;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.2)}#clock{font-size:2.5em;margin:15px 0 5px 0;color:#222}.badge{display:inline-block;padding:6px 12px;font-size:1em;font-weight:700;color:#fff;background-color:#17a2b8;border-radius:20px;box-shadow:0 2px 4px rgba(0,0,0,.15)}.btn{display:block;margin:12px auto;padding:12px 18px;font-size:1em;border:none;border-radius:8px;cursor:pointer;width:240px;transition:transform .15s ease,background .3s ease;box-shadow:0 3px 6px rgba(0,0,0,.15)}.btn:hover{transform:scale(1.05)}.btn-primary{background:#007bff;color:#fff}.btn-primary:hover{background:#0056b3}.btn-danger{background:#dc3545;color:#fff}.btn-danger:hover{background:#a71d2a}.btn-secondary{background:#6c757d;color:#fff}.btn-secondary:hover{background:#565e64}.status-box{display:inline-block;background:#fff;padding:18px;margin:12px;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,.12);width:220px}.status-title{font-weight:700;margin-bottom:12px;color:#444}.status{font-size:1.2em;padding:8px;border-radius:6px;color:#fff;font-weight:700}.active{background:#28a745}.stopped{background:#6c757d}.tocando{background:#ffc107;color:#212529}.popup{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);justify-content:center;align-items:center;z-index:1000}.popup-content{background:#fff;padding:20px;border-radius:10px;width:320px;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,.25);position:relative}.popup-content h2{margin-top:0}.popup-content label{display:block;margin-top:10px;text-align:left;font-size:.9em;color:#333}.popup-content input,.popup-content select{width:100%;padding:8px;margin-top:5px;border-radius:6px;border:1px solid #ccc}.popup-content button{margin-top:15px;padding:10px;width:100%;border:none;border-radius:6px;background:#007bff;color:#fff;cursor:pointer}.popup-content button:hover{background:#0056b3}.close{position:absolute;top:10px;right:15px;font-size:22px;cursor:pointer;color:#666}</style><header>Toque automático ETEMERB</header><div id=clock>00:00:00</div><div id=weekday class=badge>Domingo</div><div><div class=status-box><div class=status-title>Status</div><div id=toque-status class="status stopped">Desativado</div></div></div><button class="btn btn-primary"onclick=tocarAgora()>⏰ Tocar agora</button><button id=btn-ajustar class="btn btn-secondary">🕑 Ajustar Horário</button><button class="btn btn-danger"onclick=pararHoje()>🛑 Parar apenas hoje</button><button class="btn btn-secondary"onclick=desativar()>🔕 Desativar</button><button class="btn btn-primary"onclick=reativar()>✅ Reativar sistema</button><footer>© 2025 José Fernando - Espaço CRIA</footer><div id=popup class=popup><div class=popup-content><span id=close class=close>×</span><h2>Ajustar Horário</h2><form action=/ ><label for=hora>Hora:</label><input type=number id=hora name=hora min=0 max=23 required><label for=minuto>Minuto:</label><input type=number id=minuto name=minuto min=0 max=59 required><button type=submit>Salvar</button></form></div></div><script>async function atualizarEstado(){try{const t=await fetch("/pegarEstado"),e=await t.json();let a=e.status,n=document.getElementById("toque-status");"Ativo"==a?(n.textContent="Ativo",n.className="status active"):"Tocando"==a?(n.textContent="Tocando",n.className="status tocando"):"ParadoHoje"==a?(n.textContent="Parado (hoje)",n.className="status stopped"):"Desativado"==a&&(n.textContent="Desativado",n.className="status stopped"),document.getElementById("clock").textContent=e.horario;const o=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"],s=parseInt(e.diaSemana);document.getElementById("weekday").textContent=o[s]}catch(t){document.getElementById("clock").textContent="EE:EE:EE",document.getElementById("weekday").textContent="-"}}function tocarAgora(){fetch("/tocar").then((()=>{let t=document.getElementById("toque-status"),e=t.textContent,a=t.className;t.textContent="Tocando...",t.className="status tocando",setTimeout((()=>{t.textContent=e,t.className=a}),1e4)}))}function pararHoje(){fetch("/pararHoje").then((()=>{let t=document.getElementById("toque-status");t.textContent="Parado (hoje)",t.className="status stopped"}))}function desativar(){fetch("/desativar").then((()=>{let t=document.getElementById("toque-status");t.textContent="Desativado",t.className="status stopped"}))}function reativar(){fetch("/reativar").then((()=>{let t=document.getElementById("toque-status");t.textContent="Ativo",t.className="status active"}))}setInterval(atualizarEstado,500);let popup=document.getElementById("popup"),btn=document.getElementById("btn-ajustar"),closeBtn=document.getElementById("close");btn.onclick=function(){let t=new Date;document.getElementById("hora").value=t.getHours(),document.getElementById("minuto").value=t.getMinutes(),popup.style.display="flex"},closeBtn.onclick=function(){popup.style.display="none"},window.onclick=function(t){t.target==popup&&(popup.style.display="none")}</script>
+    )rawliteral";
+
+    request->send(200, "text/html", html);
+  });
+
+  // API para pegar o estado do relógio
+  server.on("/pegarEstado", HTTP_GET, [](AsyncWebServerRequest *request){
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+      request->send(500, "text/plain", "Falha ao obter hora");
+      return;
+    }
+
+    // Formatar horário (HH:MM:SS)
+    char horario[9];
+    strftime(horario, sizeof(horario), "%H:%M:%S", &timeinfo);
+
+    // Dia da semana (0 = domingo, 1 = segunda, ...)
+    int diaSemana = timeinfo.tm_wday;
+
+    // Ajusta o status do toque
+    String status = statusToque;
+    if (paradoHoje) status = "ParadoHoje";
+    else if (desativado) status = "Desativado";
+
+    // Montar JSON {status, horario, diaDaSemana}
+    char buffer[100];
+    sprintf(buffer, "{ \"status\":\"%s\", \"horario\":\"%s\", \"diaSemana\":\"%d\" }",status.c_str(),  horario, diaSemana);
+
+    // Enviar resposta JSON
+    request->send(200, "application/json", buffer);
+  });
   
-  timeClient.begin(); // Inicializa o cliente NTP
-  timeClient.update(); // Atualiza o Cliente NTP
+  // API para tocar
+  server.on("/tocar", HTTP_GET, [](AsyncWebServerRequest *request){  
+    iniciarToque();
+    request->send(200);
+  });
 
-  int horas[] = {timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds()};
+  // API para parar de tocar por hoje
+  server.on("/pararHoje", HTTP_GET, [](AsyncWebServerRequest *request){
+    paradoHoje = 1;
+    statusToque = "ParadoHoje";
+    request->send(200);
+  });
+  
+  // API para desativar o toque
+  server.on("/desativar", HTTP_GET, [](AsyncWebServerRequest *request){
+    desativado = 1;
+    statusToque = "Desativado";
+    request->send(200);
+  });
 
-  relogio.ajustarContador(timeClient.getDay(), horas);
+  // API para reativar
+  server.on("/reativar", HTTP_GET, [](AsyncWebServerRequest *request){
+    desativado = 0;
+    paradoHoje = 0;
+    statusToque = "Ativo";
+    request->send(200);
+  });
 
-  //Desconecta o WiFi para economizar recursos
-  WiFi.disconnect();
-
-  // Chama a função  que incrementará 1 segundo na contagem assíncronamente
-  timer.attach(1.0, incrementarRelogio);
+  server.begin();
 }
 
+// ================== Loop ==================
 void loop() {
+  // Use uma variável estática para rastrear o dia atual e resetar a flag
+  static int diaAnterior = -1;
+  static unsigned long ultimoSegundo = 0;
 
-  String horario = relogio.pegarHoraFormatada();
-  String DIA = String(relogio.pegarDiaSemana());
+  // Verificação de tempo
+  if (millis() - ultimoSegundo >= 1000) {
+    ultimoSegundo = millis();
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+      Serial.println("Falha ao obter hora");
+      return;
+    }
 
-  Serial.println("Dia da Semana: " + DIA);
-  Serial.println("Horário: " + horario);
-
-  // Todo dia às seis horas da manhã fazer uma sincronização com o horário
-  if(horario == "06:00:00"){
-    if(conectarAoWiFi()){
-      timeClient.begin(); // Inicializa o cliente NTP
-      timeClient.update(); // Atualiza o Cliente NTP
-
-      int horas[] = {timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds()};
-
-      relogio.ajustarContador(timeClient.getDay(), horas);
-
-      //Desconecta o WiFi para economizar recursos
-      WiFi.disconnect();
+    // Lógica para resetar a flag 'paradoHoje' no início de um novo dia
+    if (diaAnterior != timeinfo.tm_mday && diaAnterior != -1) {
+      Serial.println("Novo dia detectado. Resetando 'paradoHoje'...");
+      paradoHoje = 0;
+      if (!desativado) {
+        statusToque = "Ativo";
+      }
+    }
+    diaAnterior = timeinfo.tm_mday;
+    
+    char horario[9];
+    sprintf(horario, "%02d:%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+    Serial.println(horario);
+    
+    // Verifica os horários de toque apenas se o sistema estiver ativo e não for fim de semana
+    if (!paradoHoje && !desativado && timeinfo.tm_wday != 0 && timeinfo.tm_wday != 6) {
+      verificarToque(String(horario));
     }
   }
 
-  // Pega o dia da semana
-  int diaDaSemana = relogio.pegarDiaSemana();
-
-  //Se for Domingo ou Sábado
-  if(diaDaSemana == 0 || diaDaSemana == 6){
-    delay(1000);
-    return;
+  // Se o toque estiver ativo, verifica se a duração já passou.
+  if (statusToque == "Tocando" && (millis() - tempoInicioToque) >= (duracaoToque * 1000)) {
+    Serial.println("Toque finalizado.");
+    statusToque = "Ativo";
   }
+}
 
-  // HORÁRIO DOS TOQUES (INTEGRAL)
-  if(horario == "07:30:00")
-    ligarToque(10);
-  else if(horario == "07:45:00")
-    ligarToque(10);
-  else if(horario == "08:20:00")
-    ligarToque(10);
-  else if(horario == "09:10:00")
-    ligarToque(10);
-  else if(horario == "09:30:00")
-    ligarToque(10);
-  else if(horario == "10:20:00")
-    ligarToque(10);
-  else if(horario == "11:10:00")
-    ligarToque(10);
-  else if(horario == "12:00:00")
-    ligarToque(10);
-  else if(horario == "13:20:00")
-    ligarToque(10);
-  else if(horario == "13:30:00")
-    ligarToque(10);
-  else if(horario == "14:10:00")
-    ligarToque(10);
-  else if(horario == "15:00:00")
-    ligarToque(10);
-  else if(horario == "15:20:00")
-    ligarToque(10);
-  else if(horario == "15:30:00")
-    ligarToque(10);
-  else if(horario == "16:10:00")
-    ligarToque(10);
-  else if(horario == "17:00:00")
-    ligarToque(10);
-
-  // HORÁRIO DOS TOQUES (SUBSEQUENTE)
-  /*
-  if(horario == "19:00:00")
-    ligarToque(10);
-  else if(horario == "19:40:00")
-    ligarToque(10);
-  else if(horario == "20:20:00")
-    ligarToque(10);
-  else if(horario == "21:00:00")
-    ligarToque(10);
-  else if(horario == "21:40:00")
-    ligarToque(10);
-  else if(horario == "22:00:00")
-    ligarToque(10);
-  */
-
-  delay(1000); // Atualiza a cada segundo
+// Função para verificar se a hora atual corresponde a um toque agendado
+void verificarToque(String horarioAtual) {
+  for (int i = 0; i < numToques; i++) {
+    if (horarioAtual == horariosToque[i]) {
+      iniciarToque();
+      break;
+    }
+  }
 }
