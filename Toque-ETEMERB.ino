@@ -28,11 +28,15 @@ unsigned char desativado = 0;
 unsigned long tempoInicioToque = 0;
 const int duracaoToque = 10; // Duração do toque em segundos
 
+// Variável que controla o relé
+const int pinoRele = 0;
+
 // ================= Funções de toque =================
 void iniciarToque() {
   if (statusToque != "Tocando") {
     Serial.println("Iniciando toque...");
     statusToque = "Tocando";
+    digitalWrite(pinoRele, HIGH);
     tempoInicioToque = millis();
   }
 }
@@ -40,6 +44,7 @@ void iniciarToque() {
 // ================== Setup ==================
 void setup() {
   Serial.begin(115200);
+  pinMode(pinoRele, OUTPUT);
 
   // Conectar WiFi
   WiFi.begin(ssid, password);
@@ -195,6 +200,7 @@ void loop() {
   // Se o toque estiver ativo, verifica se a duração já passou.
   if (statusToque == "Tocando" && (millis() - tempoInicioToque) >= (duracaoToque * 1000)) {
     Serial.println("Toque finalizado.");
+    digitalWrite(pinoRele, LOW);
     statusToque = "Ativo";
   }
 }
