@@ -12,10 +12,14 @@ const long  gmtOffset = -3 * 3600;  // Fuso horário (Brasil: GMT-3)
 
 // Lista de horários dos toques
 const char* horariosToque[] = {
+  // INTEGRAL
   "07:30:00", "07:45:00", "08:20:00", "09:10:00",
   "09:30:00", "10:20:00", "11:10:00", "12:00:00",
   "13:20:00", "13:30:00", "14:10:00", "15:00:00",
-  "15:20:00", "15:30:00", "16:10:00", "17:00:00"
+  "15:20:00", "15:30:00", "16:10:00", "17:00:00",
+  // SUBSEQUENTE
+  "19:00:00", "19:40:00", "20:20:00", "21:00:00",
+  "21:40:00", "22:00:00"
 };
 const int numToques = sizeof(horariosToque) / sizeof(horariosToque[0]);
 
@@ -29,7 +33,7 @@ unsigned long tempoInicioToque = 0;
 const int duracaoToque = 10; // Duração do toque em segundos
 
 // Variável que controla o relé
-const int pinoRele = 0;
+const int pinoRele = 17;
 
 // ================= Funções de toque =================
 void iniciarToque() {
@@ -139,6 +143,7 @@ void setup() {
 
   // API para parar de tocar por hoje
   server.on("/pararHoje", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(pinoRele, LOW);
     paradoHoje = 1;
     statusToque = "ParadoHoje";
     request->send(200);
@@ -146,6 +151,7 @@ void setup() {
   
   // API para desativar o toque
   server.on("/desativar", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(pinoRele, LOW);
     desativado = 1;
     statusToque = "Desativado";
     request->send(200);
@@ -153,6 +159,7 @@ void setup() {
 
   // API para reativar
   server.on("/reativar", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(pinoRele, LOW);
     desativado = 0;
     paradoHoje = 0;
     statusToque = "Ativo";
@@ -193,7 +200,7 @@ void loop() {
     
     // Verifica os horários de toque apenas se o sistema estiver ativo e não for fim de semana
     if (!paradoHoje && !desativado && timeinfo.tm_wday != 0 && timeinfo.tm_wday != 6) {
-      verificarToque(String(horario));
+      verificarToque(horario);
     }
   }
 
@@ -206,9 +213,10 @@ void loop() {
 }
 
 // Função para verificar se a hora atual corresponde a um toque agendado
-void verificarToque(String horarioAtual) {
+void verificarToque(const char* horarioAtual) {
   for (int i = 0; i < numToques; i++) {
-    if (horarioAtual == horariosToque[i]) {
+    // strcmp retorna 0 se as strings forem iguais
+    if (strcmp(horarioAtual, horariosToque[i]) == 0) {
       iniciarToque();
       break;
     }
