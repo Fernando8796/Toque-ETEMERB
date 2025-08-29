@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toque Automático ETEMERB</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      text-align: center;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    header {
+      background: linear-gradient(135deg, #0056b3, #007bff);
+      color: white;
+      padding: 18px 0;
+      font-size: 1.5em;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    #clock {
+        font-size: 2.5em;
+        margin: 15px 0 5px 0;
+        color: #222;
+    }
+    .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        font-size: 1em;
+        font-weight: bold;
+        color: #fff;
+        background-color: #17a2b8;
+        border-radius: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .btn {
+      display: block;
+      margin: 12px auto;
+      padding: 12px 18px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 240px;
+      transition: transform 0.15s ease, background 0.3s ease;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    }
+    .btn:hover { transform: scale(1.05); }
+    .btn-primary { background: #007bff; color: white; }
+    .btn-primary:hover { background: #0056b3; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger:hover { background: #a71d2a; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-secondary:hover { background: #565e64; }
+
+    .status-box {
+      display: inline-block;
+      background: white;
+      padding: 18px;
+      margin: 12px;
+      border-radius: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+      width: 220px;
+    }
+    .status-title {
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: #444;
+    }
+    .status {
+      font-size: 1.2em;
+      padding: 8px;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+    }
+    .active { background: #28a745; }
+    .stopped { background: #6c757d; }
+    .tocando { background: #ffc107; color: #212529; }
+
+    /* Estilo do pop-up */
+    .popup {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .popup-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      position: relative;
+    }
+    .popup-content h2 {
+      margin-top: 0;
+    }
+    .popup-content label {
+      display: block;
+      margin-top: 10px;
+      text-align: left;
+      font-size: 0.9em;
+      color: #333;
+    }
+    .popup-content input, .popup-content select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .popup-content button {
+      margin-top: 15px;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    .popup-content button:hover {
+      background: #0056b3;
+    }
+    .close {
+      position: absolute;
+      top: 10px; right: 15px;
+      font-size: 22px;
+      cursor: pointer;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <!-- Minificado em: https://wordtohtml.net/html/minify-compress -->
+  <header>Toque automático ETEMERB</header>
+
+  <div id="clock">00:00:00</div>
+  <div id="weekday" class="badge">Domingo</div>
+
+  <!-- Status -->
+  <div>
+    <div class="status-box">
+      <div class="status-title">Status</div>
+      <div id="toque-status" class="status stopped">Desativado</div>
+    </div>
+  </div>
+
+  <!-- Botões -->
+  <button class="btn btn-primary" onclick="tocarAgora()">⏰ Tocar agora</button>
+  <button id="btn-ajustar" class="btn btn-secondary">🕑 Ajustar Horário</button>
+  <button class="btn btn-danger" onclick="pararHoje()">🛑 Parar apenas hoje</button>
+  <button class="btn btn-secondary" onclick="desativar()">🔕 Desativar</button>
+  <button class="btn btn-primary" onclick="reativar()">🔄 Reiniciar sistema</button>
+
+  <footer>&copy; 2025 José Fernando - Espaço CRIA</footer>
+
+  <!-- Pop-up -->
+  <div id="popup" class="popup">
+    <div class="popup-content">
+      <span id="close" class="close">&times;</span>
+      <h2>Ajustar Horário</h2>
+      <form action="/" method="get">
+        <label for="hora">Hora:</label>
+        <input type="number" id="hora" name="hora" min="0" max="23" required>
+
+        <label for="minuto">Minuto:</label>
+        <input type="number" id="minuto" name="minuto" min="0" max="59" required>
+
+        <button type="submit">Salvar</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Função principal para ficar atualizando o estado
+    async function atualizarEstado() {
+      try {
+        const resposta = await fetch("/pegarEstado");
+        const dados = await resposta.json();
+
+        // Status do relógio
+        let status = dados.status;
+        let statusEl = document.getElementById("toque-status");
+        if (status == "Ativo"){
+          statusEl.textContent = "Ativo";
+          statusEl.className = "status active";
+        } else if (status == "Tocando"){
+          statusEl.textContent = "Tocando";
+          statusEl.className = "status tocando";
+        } else if (status == "ParadoHoje"){
+          statusEl.textContent = "Parado (hoje)";
+          statusEl.className = "status stopped";
+        } else if (status == "Desativado"){
+          statusEl.textContent = "Desativado";
+          statusEl.className = "status stopped";
+        }
+        
+        // Horário e dia da semana
+        document.getElementById("clock").textContent = dados.horario;
+        const dias = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+        const diaIndex = parseInt(dados.diaSemana);
+        document.getElementById("weekday").textContent = dias[diaIndex];
+
+      } catch(err) {
+        document.getElementById("clock").textContent = "EE:EE:EE";
+        document.getElementById("weekday").textContent = "-";
+      }
+    }
+    setInterval(atualizarEstado, 500);
+
+    function tocarAgora() {
+      fetch("/tocar").then(() => {
+        let el = document.getElementById("toque-status");
+        let textoOriginal = el.textContent;
+        let classeOriginal = el.className;
+        el.textContent = "Tocando...";
+        el.className = "status tocando";
+        setTimeout(() => {
+          el.textContent = textoOriginal;
+          el.className = classeOriginal;
+        }, 10000);
+      });
+    }
+    function pararHoje() {
+      fetch("/pararHoje").then(() => {
+        let el = document.getElementById("toque-status");
+        el.textContent = "Parado (hoje)";
+        el.className = "status stopped";
+      });
+    }
+    function desativar() {
+      fetch("/desativar").then(() => {
+        let el = document.getElementById("toque-status");
+        el.textContent = "Desativado";
+        el.className = "status stopped";
+      });
+    }
+    function reativar() {
+      fetch("/reativar").then(() => {
+        let el = document.getElementById("toque-status");
+        el.textContent = "Ativo";
+        el.className = "status active";
+      });
+    }
+
+    // POP-UP
+    let popup = document.getElementById("popup");
+    let btn = document.getElementById("btn-ajustar");
+    let closeBtn = document.getElementById("close");
+
+    // Abre a janela e preenche automaticamente a data
+    btn.onclick = function() {
+        let agora = new Date();
+        document.getElementById("hora").value = agora.getHours();
+        document.getElementById("minuto").value = agora.getMinutes();
+    
+        popup.style.display = "flex";
+    }
+    closeBtn.onclick = function() {
+      popup.style.display = "none";
+    }
+    window.onclick = function(e) {
+      if (e.target == popup) popup.style.display = "none";
+    }
+  </script>
+</body>
+</html>
