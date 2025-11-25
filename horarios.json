@@ -1,0 +1,90 @@
+[
+    {
+        "time": "07:30",
+        "label": "Primeiro Toque"
+    },
+    {
+        "time": "07:45",
+        "label": "In\u00edcio das Aulas (1\u00aa Aula)"
+    },
+    {
+        "time": "08:20",
+        "label": "Fim da 1\u00aa Aula / In\u00edcio da 2\u00aa Aula"
+    },
+    {
+        "time": "09:10",
+        "label": "Toque para o intervalo"
+    },
+    {
+        "time": "09:30",
+        "label": "Fim do Intervalo / In\u00edcio da 3\u00aa Aula"
+    },
+    {
+        "time": "10:20",
+        "label": "Fim da 3\u00aa Aula / In\u00edcio da 4\u00aa Aula"
+    },
+    {
+        "time": "11:10",
+        "label": "Fim da 4\u00aa Aula / In\u00edcio da 5\u00aa Aula"
+    },
+    {
+        "time": "12:00",
+        "label": "In\u00edcio do Almo\u00e7o"
+    },
+    {
+        "time": "13:20",
+        "label": "Primeiro Toque da Tarde"
+    },
+    {
+        "time": "13:30",
+        "label": "In\u00edcio das Aulas da Tarde (6\u00aa Aula)"
+    },
+    {
+        "time": "14:10",
+        "label": "Fim da 6\u00aa Aula / In\u00edcio da 7\u00aa Aula"
+    },
+    {
+        "time": "15:00",
+        "label": "Toque para o intervalo"
+    },
+    {
+        "time": "15:20",
+        "label": "Fim do Intervalo / In\u00edcio da 8\u00aa Aula"
+    },
+    {
+        "time": "15:30",
+        "label": "In\u00edcio da 8\u00aa Aula"
+    },
+    {
+        "time": "16:10",
+        "label": "Fim da 8\u00aa Aula / In\u00edcio da 9\u00aa Aula"
+    },
+    {
+        "time": "17:00",
+        "label": "Sa\u00edda"
+    },
+    {
+        "time": "19:00",
+        "label": "In\u00edcio das Aulas Noturnas (1\u00aa Aula)"
+    },
+    {
+        "time": "19:40",
+        "label": "Fim da 1\u00aa Aula / In\u00edcio da 2\u00aa Aula"
+    },
+    {
+        "time": "20:20",
+        "label": "Fim da 2\u00aa Aula"
+    },
+    {
+        "time": "21:00",
+        "label": "In\u00edcio da 3\u00aa Aula"
+    },
+    {
+        "time": "21:40",
+        "label": "Fim da 3\u00aa Aula / In\u00edcio da 4\u00aa Aula"
+    },
+    {
+        "time": "22:00",
+        "label": "Fim das Aulas Noturnas / Sa\u00edda"
+    }
+]

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel ETEMERB - Toque Automático</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            padding-bottom: 50px;
+        }
+
+        /* Cabeçalho */
+        .navbar {
+            background: linear-gradient(135deg, #004e92, #000428);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* Relógio Gigante */
+        .clock-container {
+            text-align: center;
+            padding: 40px 0;
+        }
+        #clock {
+            font-size: 5rem;
+            font-weight: 800;
+            color: #2c3e50;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+        #date-display {
+            font-size: 1.2rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+
+        /* Cards de Status e Ações */
+        .action-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .action-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        
+        /* Grid de Horários */
+        .schedule-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            border-left: 5px solid var(--primary-color);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .schedule-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+            z-index: 10;
+        }
+        .schedule-time {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .schedule-label {
+            font-size: 0.85rem;
+            color: #777;
+        }
+        
+        /* Botão de Adicionar Novo */
+        .add-schedule-card {
+            border-left: 5px solid #198754;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #198754;
+        }
+        .add-schedule-card i {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        /* Status Badges */
+        .status-indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { background-color: #198754; box-shadow: 0 0 10px #198754; }
+        .status-stopped { background-color: #dc3545; }
+        .status-ringing { background-color: #ffc107; animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-bell me-2"></i> ETEMERB - Painel de controle
+            </span>
+            <div class="text-white d-flex align-items-center">
+                <span id="system-status-dot" class="status-indicator status-stopped"></span>
+                <span id="system-status-text" class="fw-bold small">Conectando...</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <div class="clock-container">
+                    <div id="clock">00:00:00</div>
+                    <div id="date-display">Carregando data...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-5">
+            <div class="col-md-4">
+                <button onclick="tocarAgora()" class="btn btn-primary w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column">
+                    <i class="fas fa-bullhorn fa-2x mb-2"></i>
+                    <span class="fw-bold">Tocar Manualmente</span>
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button onclick="pararHoje()" class="btn btn-warning w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column text-dark">
+                    <i class="fas fa-pause-circle fa-2x mb-2"></i>
+                    <span class="fw-bold">Parar Hoje</span>
+                    <small class="text-muted mt-1">Retorna amanhã</small>
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button onclick="toggleSistema()" id="btn-toggle-sistema" class="btn btn-danger w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column">
+                    <i class="fas fa-power-off fa-2x mb-2"></i>
+                    <span class="fw-bold" id="lbl-toggle-sistema">Desativar Sistema</span>
+                </button>
+            </div>
+        </div>
+
+        <hr class="my-5">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold text-secondary"><i class="fas fa-clock me-2"></i>Horários Programados</h3>
+            <span class="badge bg-secondary" id="schedule-count">0 horários</span>
+        </div>
+
+        <div class="row g-4" id="schedule-grid">
+            </div>
+
+    </div>
+
+    <footer>
+        &copy; 2025 José Fernando - Espaço CRIA <br>
+        <small>Sistema Rodando em Raspberry Pi • v2.0</small>
+    </footer>
+
+    <div class="modal fade" id="modalHorario" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Gerenciar Horário</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="formHorario">
+                        <input type="hidden" id="editMode" value="false">
+                        <input type="hidden" id="originalTime" value="">
+                        
+                        <div class="mb-3">
+                            <label for="inputTime" class="form-label fw-bold">Horário do Toque</label>
+                            <input type="time" class="form-control form-control-lg text-center fw-bold" id="inputTime" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputLabel" class="form-label text-muted small">Descrição (Opcional)</label>
+                            <input type="text" class="form-control" id="inputLabel" placeholder="Ex: Intervalo">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-danger" id="btnDelete" style="display: none;" onclick="excluirHorario()">
+                        <i class="fas fa-trash"></i> Excluir
+                    </button>
+                    <div>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary px-4" onclick="salvarHorario()">Salvar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let horarios = [];
+        let statusSistemaAtual = ""; // Para evitar re-renderizar a UI se não mudou
+
+        // --- ATUALIZAÇÃO DO RELÓGIO UI ---
+        function atualizarRelogio() {
+            const agora = new Date();
+            const timeString = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const dateString = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+            document.getElementById("clock").textContent = timeString;
+            document.getElementById("date-display").textContent = dateString;
+        }
+        setInterval(atualizarRelogio, 1000);
+        atualizarRelogio();
+
+        // --- COMUNICAÇÃO COM A API (FLASK) ---
+
+        // 1. Carrega a lista de horários do Backend
+        async function carregarDados() {
+            try {
+                const response = await fetch('/api/horarios');
+                horarios = await response.json();
+                renderizarHorarios();
+            } catch (error) {
+                console.error("Erro ao carregar horários:", error);
+            }
+        }
+
+        // 2. Monitora o Status do Sistema a cada 2 segundos
+        async function monitorarStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const dados = await response.json();
+                
+                // Atualiza UI baseada no status
+                if (dados.sistema.status !== statusSistemaAtual) {
+                    statusSistemaAtual = dados.sistema.status;
+                    atualizarStatusUI(dados.sistema.status);
+                }
+
+                // Se estiver tocando, muda o indicador visual
+                const dot = document.getElementById("system-status-dot");
+                const text = document.getElementById("system-status-text");
+                if (dados.sistema.tocando) {
+                    dot.className = "status-indicator status-ringing";
+                    text.textContent = "TOCANDO AGORA...";
+                } else {
+                    // Restaura o indicador correto
+                    atualizarStatusUI(dados.sistema.status);
+                }
+
+            } catch (error) {
+                console.error("Erro ao conectar com servidor:", error);
+                document.getElementById("system-status-text").textContent = "Desconectado";
+                document.getElementById("system-status-dot").className = "status-indicator bg-secondary";
+            }
+        }
+
+        // --- RENDERIZAÇÃO ---
+        function renderizarHorarios() {
+            const grid = document.getElementById("schedule-grid");
+            grid.innerHTML = "";
+
+            // Ordena visualmente
+            horarios.sort((a, b) => a.time.localeCompare(b.time));
+            document.getElementById("schedule-count").textContent = `${horarios.length} horários`;
+
+            horarios.forEach(h => {
+                const col = document.createElement("div");
+                col.className = "col-6 col-md-4 col-lg-3";
+                col.innerHTML = `
+                    <div class="schedule-card" onclick="abrirModalEditar('${h.time}', '${h.label || ''}')">
+                        <div class="schedule-time">${h.time}</div>
+                        <div class="schedule-label">${h.label || '-'}</div>
+                    </div>
+                `;
+                grid.appendChild(col);
+            });
+
+            // Botão Adicionar
+            const addCol = document.createElement("div");
+            addCol.className = "col-6 col-md-4 col-lg-3";
+            addCol.innerHTML = `
+                <div class="schedule-card add-schedule-card" onclick="abrirModalNovo()">
+                    <i class="fas fa-plus-circle"></i>
+                    <div class="fw-bold">Adicionar</div>
+                </div>
+            `;
+            grid.appendChild(addCol);
+        }
+
+        // --- MANIPULAÇÃO DE DADOS (SALVAR/DELETAR) ---
+        const modalEl = new bootstrap.Modal(document.getElementById('modalHorario'));
+
+        function abrirModalNovo() {
+            document.getElementById("modalTitle").textContent = "Novo Horário";
+            document.getElementById("inputTime").value = "";
+            document.getElementById("inputLabel").value = "";
+            document.getElementById("editMode").value = "false";
+            document.getElementById("btnDelete").style.display = "none";
+            modalEl.show();
+        }
+
+        function abrirModalEditar(time, label) {
+            document.getElementById("modalTitle").textContent = "Editar Horário";
+            document.getElementById("inputTime").value = time;
+            document.getElementById("inputLabel").value = label;
+            document.getElementById("editMode").value = "true";
+            document.getElementById("originalTime").value = time;
+            document.getElementById("btnDelete").style.display = "inline-block";
+            modalEl.show();
+        }
+
+        async function salvarHorario() {
+            const time = document.getElementById("inputTime").value;
+            const label = document.getElementById("inputLabel").value;
+            const isEdit = document.getElementById("editMode").value === "true";
+            const original = document.getElementById("originalTime").value;
+
+            if (!time) return alert("Selecione um horário!");
+
+            // Se for edição, primeiro deletamos o antigo
+            if (isEdit && time !== original) {
+                await fetch('/api/horarios', {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ time: original })
+                });
+            }
+
+            // Envia o novo (ou o editado)
+            const res = await fetch('/api/horarios', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ time, label })
+            });
+
+            if (res.status === 409) {
+                alert("Este horário já existe!");
+            } else {
+                carregarDados(); // Recarrega a lista do servidor
+                modalEl.hide();
+            }
+        }
+
+        async function excluirHorario() {
+            if(!confirm("Tem certeza que deseja excluir?")) return;
+            
+            const original = document.getElementById("originalTime").value;
+            
+            await fetch('/api/horarios', {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ time: original })
+            });
+
+            carregarDados();
+            modalEl.hide();
+        }
+
+        // --- AÇÕES DO SISTEMA ---
+
+        async function tocarAgora() {
+            await fetch('/api/tocar', { method: 'POST' });
+            // O feedback visual virá automaticamente pelo monitorarStatus()
+        }
+
+        async function pararHoje() {
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ status: 'ParadoHoje' })
+            });
+            // monitorarStatus() vai atualizar a UI em breve
+        }
+
+        async function toggleSistema() {
+            // Descobre o status inverso
+            let novoStatus = (statusSistemaAtual === 'Ativo') ? 'Desativado' : 'Ativo';
+            
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ status: novoStatus })
+            });
+        }
+
+        function atualizarStatusUI(status) {
+            const dot = document.getElementById("system-status-dot");
+            const text = document.getElementById("system-status-text");
+            const btnToggle = document.getElementById("btn-toggle-sistema");
+            const lblToggle = document.getElementById("lbl-toggle-sistema");
+
+            if (status === "Ativo") {
+                dot.className = "status-indicator status-active";
+                text.textContent = "Sistema Ativo";
+                btnToggle.className = "btn btn-danger w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column";
+                lblToggle.textContent = "Desativar Sistema";
+            } else if (status === "Desativado") {
+                dot.className = "status-indicator status-stopped";
+                text.textContent = "Sistema Desativado";
+                btnToggle.className = "btn btn-success w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column";
+                lblToggle.textContent = "Ativar Sistema";
+            } else if (status === "ParadoHoje") {
+                dot.className = "status-indicator bg-warning";
+                text.textContent = "Pausado (Hoje)";
+                // Botão de toggle volta para ativar
+                btnToggle.className = "btn btn-success w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column";
+                lblToggle.textContent = "Reativar Sistema";
+            }
+        }
+
+        // Inicialização
+        carregarDados();
+        setInterval(monitorarStatus, 1000); // Polling a cada 1 segundo
+    </script>
+</body>
+</html>
