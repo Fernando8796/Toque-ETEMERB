@@ -28,92 +28,38 @@
             background: linear-gradient(135deg, #004e92, #000428);
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
+        .navbar-brand { font-weight: 700; letter-spacing: 1px; }
 
         /* Relógio Gigante */
-        .clock-container {
-            text-align: center;
-            padding: 40px 0;
-        }
-        #clock {
-            font-size: 5rem;
-            font-weight: 800;
-            color: #2c3e50;
-            line-height: 1;
-            font-variant-numeric: tabular-nums;
-        }
-        #date-display {
-            font-size: 1.2rem;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-top: 10px;
-        }
+        .clock-container { text-align: center; padding: 40px 0; }
+        #clock { font-size: 5rem; font-weight: 800; color: #2c3e50; line-height: 1; font-variant-numeric: tabular-nums; }
+        #date-display { font-size: 1.2rem; color: #6c757d; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px; }
 
-        /* Cards de Status e Ações */
+        /* Cards e Animações */
         .action-card {
             transition: transform 0.2s, box-shadow 0.2s;
             border: none;
             border-radius: 15px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        .action-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-        }
+        .action-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         
-        /* Grid de Horários */
         .schedule-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            border-left: 5px solid var(--primary-color);
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: relative;
+            background: white; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer;
+            border-left: 5px solid var(--primary-color); transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative;
         }
-        .schedule-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
-            z-index: 10;
-        }
-        .schedule-time {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #333;
-        }
-        .schedule-label {
-            font-size: 0.85rem;
-            color: #777;
-        }
+        .schedule-card:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.12); z-index: 10; }
+        .schedule-time { font-size: 1.8rem; font-weight: 700; color: #333; }
+        .schedule-label { font-size: 0.85rem; color: #777; }
         
-        /* Botão de Adicionar Novo */
         .add-schedule-card {
-            border-left: 5px solid #198754;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: #198754;
+            border-left: 5px solid #198754; display: flex; align-items: center;
+            justify-content: center; flex-direction: column; color: #198754;
         }
-        .add-schedule-card i {
-            font-size: 2rem;
-            margin-bottom: 5px;
-        }
+        .add-schedule-card i { font-size: 2rem; margin-bottom: 5px; }
 
-        /* Status Badges */
-        .status-indicator {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
+        .status-indicator { width: 15px; height: 15px; border-radius: 50%; display: inline-block; margin-right: 8px; }
         .status-active { background-color: #198754; box-shadow: 0 0 10px #198754; }
         .status-stopped { background-color: #dc3545; }
         .status-ringing { background-color: #ffc107; animation: pulse 1s infinite; }
@@ -123,13 +69,7 @@
             50% { opacity: 0.5; transform: scale(1.2); }
             100% { opacity: 1; transform: scale(1); }
         }
-
-        footer {
-            margin-top: 50px;
-            text-align: center;
-            color: #aaa;
-            font-size: 0.9rem;
-        }
+        footer { margin-top: 50px; text-align: center; color: #aaa; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -147,7 +87,6 @@
     </nav>
 
     <div class="container">
-        
         <div class="row justify-content-center">
             <div class="col-12">
                 <div class="clock-container">
@@ -159,9 +98,9 @@
 
         <div class="row g-3 mb-5">
             <div class="col-md-4">
-                <button onclick="tocarAgora()" class="btn btn-primary w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column">
-                    <i class="fas fa-bullhorn fa-2x mb-2"></i>
-                    <span class="fw-bold">Tocar Manualmente</span>
+                <button onclick="gerenciarToqueManual()" id="btn-manual-action" class="btn btn-primary w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column">
+                    <i class="fas fa-bullhorn fa-2x mb-2" id="icon-manual"></i>
+                    <span class="fw-bold" id="text-manual">Tocar Manualmente</span>
                 </button>
             </div>
             <div class="col-md-4">
@@ -186,14 +125,12 @@
             <span class="badge bg-secondary" id="schedule-count">0 horários</span>
         </div>
 
-        <div class="row g-4" id="schedule-grid">
-            </div>
-
+        <div class="row g-4" id="schedule-grid"></div>
     </div>
 
     <footer>
         &copy; 2025 José Fernando - Espaço CRIA <br>
-        <small>Sistema Rodando em Raspberry Pi • v2.0</small>
+        <small>Sistema Rodando em Raspberry Pi • v2.1</small>
     </footer>
 
     <div class="modal fade" id="modalHorario" tabindex="-1" aria-hidden="true">
@@ -207,7 +144,6 @@
                     <form id="formHorario">
                         <input type="hidden" id="editMode" value="false">
                         <input type="hidden" id="originalTime" value="">
-                        
                         <div class="mb-3">
                             <label for="inputTime" class="form-label fw-bold">Horário do Toque</label>
                             <input type="time" class="form-control form-control-lg text-center fw-bold" id="inputTime" required>
@@ -235,69 +171,107 @@
 
     <script>
         let horarios = [];
-        let statusSistemaAtual = ""; // Para evitar re-renderizar a UI se não mudou
+        let statusSistemaAtual = "";
+        let isRingingLocal = false; // Controle de estado local do toque
 
-        // --- ATUALIZAÇÃO DO RELÓGIO UI ---
+        // --- RELÓGIO UI ---
         function atualizarRelogio() {
             const agora = new Date();
-            const timeString = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const dateString = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-
-            document.getElementById("clock").textContent = timeString;
-            document.getElementById("date-display").textContent = dateString;
+            document.getElementById("clock").textContent = agora.toLocaleTimeString('pt-BR');
+            document.getElementById("date-display").textContent = agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
         }
         setInterval(atualizarRelogio, 1000);
         atualizarRelogio();
 
-        // --- COMUNICAÇÃO COM A API (FLASK) ---
-
-        // 1. Carrega a lista de horários do Backend
+        // --- API & DADOS ---
         async function carregarDados() {
             try {
                 const response = await fetch('/api/horarios');
                 horarios = await response.json();
                 renderizarHorarios();
-            } catch (error) {
-                console.error("Erro ao carregar horários:", error);
-            }
+            } catch (error) { console.error(error); }
         }
 
-        // 2. Monitora o Status do Sistema a cada 2 segundos
+        // --- MONITORAMENTO & SINCRONIZAÇÃO UI ---
         async function monitorarStatus() {
             try {
                 const response = await fetch('/api/status');
                 const dados = await response.json();
                 
-                // Atualiza UI baseada no status
+                // 1. Atualiza Indicador do Topo e Botão Toggle (se mudou)
                 if (dados.sistema.status !== statusSistemaAtual) {
                     statusSistemaAtual = dados.sistema.status;
                     atualizarStatusUI(dados.sistema.status);
                 }
 
-                // Se estiver tocando, muda o indicador visual
                 const dot = document.getElementById("system-status-dot");
                 const text = document.getElementById("system-status-text");
+
+                // 2. Verifica se está tocando e atualiza Botão Principal
                 if (dados.sistema.tocando) {
                     dot.className = "status-indicator status-ringing";
                     text.textContent = "TOCANDO AGORA...";
+                    
+                    // Se o servidor diz que está tocando, forçamos o botão vermelho
+                    if (!isRingingLocal) atualizarBotaoManual(true);
+                    
                 } else {
-                    // Restaura o indicador correto
+                    // Se parou de tocar
+                    if (isRingingLocal) atualizarBotaoManual(false);
+                    
+                    // Restaura indicador do topo baseado no status geral
                     atualizarStatusUI(dados.sistema.status);
                 }
 
             } catch (error) {
-                console.error("Erro ao conectar com servidor:", error);
+                console.error("Erro conexão:", error);
                 document.getElementById("system-status-text").textContent = "Desconectado";
                 document.getElementById("system-status-dot").className = "status-indicator bg-secondary";
             }
         }
 
-        // --- RENDERIZAÇÃO ---
+        // --- GERENCIAMENTO DO TOQUE ---
+        async function gerenciarToqueManual() {
+            if (isRingingLocal) {
+                await pararToque();
+            } else {
+                await tocarAgora();
+            }
+        }
+
+        async function tocarAgora() {
+            atualizarBotaoManual(true); // Feedback instantâneo
+            try { await fetch('/api/tocar', { method: 'POST' }); }
+            catch (e) { atualizarBotaoManual(false); }
+        }
+
+        async function pararToque() {
+            atualizarBotaoManual(false); // Feedback instantâneo
+            try { await fetch('/api/parar', { method: 'POST' }); }
+            catch (e) { console.error(e); }
+        }
+
+        function atualizarBotaoManual(tocando) {
+            isRingingLocal = tocando;
+            const btn = document.getElementById("btn-manual-action");
+            const icon = document.getElementById("icon-manual");
+            const text = document.getElementById("text-manual");
+
+            if (tocando) {
+                btn.className = "btn btn-danger w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column status-ringing";
+                icon.className = "fas fa-stop-circle fa-2x mb-2";
+                text.textContent = "PARAR TOQUE";
+            } else {
+                btn.className = "btn btn-primary w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column";
+                icon.className = "fas fa-bullhorn fa-2x mb-2";
+                text.textContent = "Tocar Manualmente";
+            }
+        }
+
+        // --- RENDERIZAÇÃO GRID ---
         function renderizarHorarios() {
             const grid = document.getElementById("schedule-grid");
             grid.innerHTML = "";
-
-            // Ordena visualmente
             horarios.sort((a, b) => a.time.localeCompare(b.time));
             document.getElementById("schedule-count").textContent = `${horarios.length} horários`;
 
@@ -308,24 +282,20 @@
                     <div class="schedule-card" onclick="abrirModalEditar('${h.time}', '${h.label || ''}')">
                         <div class="schedule-time">${h.time}</div>
                         <div class="schedule-label">${h.label || '-'}</div>
-                    </div>
-                `;
+                    </div>`;
                 grid.appendChild(col);
             });
 
-            // Botão Adicionar
             const addCol = document.createElement("div");
             addCol.className = "col-6 col-md-4 col-lg-3";
             addCol.innerHTML = `
                 <div class="schedule-card add-schedule-card" onclick="abrirModalNovo()">
-                    <i class="fas fa-plus-circle"></i>
-                    <div class="fw-bold">Adicionar</div>
-                </div>
-            `;
+                    <i class="fas fa-plus-circle"></i><div class="fw-bold">Adicionar</div>
+                </div>`;
             grid.appendChild(addCol);
         }
 
-        // --- MANIPULAÇÃO DE DADOS (SALVAR/DELETAR) ---
+        // --- MODAL ---
         const modalEl = new bootstrap.Modal(document.getElementById('modalHorario'));
 
         function abrirModalNovo() {
@@ -355,70 +325,31 @@
 
             if (!time) return alert("Selecione um horário!");
 
-            // Se for edição, primeiro deletamos o antigo
             if (isEdit && time !== original) {
-                await fetch('/api/horarios', {
-                    method: 'DELETE',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ time: original })
-                });
+                await fetch('/api/horarios', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ time: original }) });
             }
 
-            // Envia o novo (ou o editado)
-            const res = await fetch('/api/horarios', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ time, label })
-            });
+            const res = await fetch('/api/horarios', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ time, label }) });
 
-            if (res.status === 409) {
-                alert("Este horário já existe!");
-            } else {
-                carregarDados(); // Recarrega a lista do servidor
-                modalEl.hide();
-            }
+            if (res.status === 409) alert("Este horário já existe!");
+            else { carregarDados(); modalEl.hide(); }
         }
 
         async function excluirHorario() {
-            if(!confirm("Tem certeza que deseja excluir?")) return;
-            
-            const original = document.getElementById("originalTime").value;
-            
-            await fetch('/api/horarios', {
-                method: 'DELETE',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ time: original })
-            });
-
+            if(!confirm("Tem certeza?")) return;
+            await fetch('/api/horarios', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ time: document.getElementById("originalTime").value }) });
             carregarDados();
             modalEl.hide();
         }
 
-        // --- AÇÕES DO SISTEMA ---
-
-        async function tocarAgora() {
-            await fetch('/api/tocar', { method: 'POST' });
-            // O feedback visual virá automaticamente pelo monitorarStatus()
-        }
-
+        // --- SISTEMA ---
         async function pararHoje() {
-            await fetch('/api/config', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ status: 'ParadoHoje' })
-            });
-            // monitorarStatus() vai atualizar a UI em breve
+            await fetch('/api/config', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ status: 'ParadoHoje' }) });
         }
 
         async function toggleSistema() {
-            // Descobre o status inverso
             let novoStatus = (statusSistemaAtual === 'Ativo') ? 'Desativado' : 'Ativo';
-            
-            await fetch('/api/config', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ status: novoStatus })
-            });
+            await fetch('/api/config', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ status: novoStatus }) });
         }
 
         function atualizarStatusUI(status) {
@@ -440,15 +371,13 @@
             } else if (status === "ParadoHoje") {
                 dot.className = "status-indicator bg-warning";
                 text.textContent = "Pausado (Hoje)";
-                // Botão de toggle volta para ativar
                 btnToggle.className = "btn btn-success w-100 p-4 action-card h-100 d-flex align-items-center justify-content-center flex-column";
                 lblToggle.textContent = "Reativar Sistema";
             }
         }
 
-        // Inicialização
         carregarDados();
-        setInterval(monitorarStatus, 1000); // Polling a cada 1 segundo
+        setInterval(monitorarStatus, 1000);
     </script>
 </body>
 </html>
